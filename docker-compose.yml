@@ -1,0 +1,95 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: keycloak-db
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: keycloak
+    volumes:
+      - keycloak-data:/var/lib/postgresql/data
+    networks:
+      - keycloak-net
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0.3
+    container_name: keycloak
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+    command: >
+      start-dev --hostname http://localhost:8080
+            --db=postgres
+            --db-url=jdbc:postgresql://postgres:5432/keycloak
+            --db-username=keycloak
+            --db-password=keycloak
+    ports:
+      - "8080:8080"        # Keycloak UI
+    depends_on:
+      - postgres
+    networks:
+      - keycloak-net
+
+  metrics-app:
+    image: metrics-app:latest   # built from your Dockerfile
+    container_name: metrics-app
+    ports:
+      - "8081:8080"        # App exposed at localhost:8081
+    environment:
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: http://keycloak:8080/realms/myrealm
+      # RabbitMQ connection
+      SPRING_RABBITMQ_HOST: rabbitmq
+      # Kafka connection (example)
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    depends_on:
+      - keycloak
+      - rabbitmq
+      - kafka
+    networks:
+      - keycloak-net
+
+# ---------- New Services ----------
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"    # AMQP protocol
+      - "15672:15672"  # Management UI http://localhost:15672
+    networks:
+      - keycloak-net
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.6.1
+    container_name: zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+    ports:
+      - "2181:2181"
+    networks:
+      - keycloak-net
+
+  kafka:
+    image: confluentinc/cp-kafka:7.6.1
+    container_name: kafka
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    ports:
+      - "9092:9092"
+    depends_on:
+      - zookeeper
+    networks:
+      - keycloak-net
+
+
+volumes:
+  keycloak-data:
+
+networks:
+  keycloak-net:
+    driver: bridge

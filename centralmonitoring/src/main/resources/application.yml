@@ -1,0 +1,29 @@
+spring:
+  application:
+    name: centralmonitoring
+
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: metrics-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+
+
+thanos:
+  base-url: http://82.223.13.241:10904
+  appid: my-app
+
+
+server:
+  port: 1111
