@@ -22,6 +22,8 @@ public class MetricsService {
 
     List<String> appIdList = new java.util.ArrayList<>();
 
+    Map<String, List<String>> appMetricsMap = new java.util.HashMap<>();
+
     public MetricsService(ThanosClient thanosClient, RabbitTemplate rabbitTemplate, KafkaTemplate<String, String> kafkaTemplate) {
         this.thanosClient = thanosClient;
         this.rabbitTemplate = rabbitTemplate;
@@ -78,5 +80,16 @@ public class MetricsService {
         for (String appId : appIdList) {
             getMetricsForSpecificApplication(appId);
         }
+    }
+
+    public MetricsResponseDto getSpecificMetricsForApplication(String applicationId) {
+        List<String> metrics = appMetricsMap.get(applicationId);
+        if (metrics == null || metrics.isEmpty()) {
+            throw new RuntimeException("No specific metrics configured for application ID: " + applicationId);
+        }
+        // Fetch and filter metrics from Thanos based on the configured list
+        
+
+        throw new UnsupportedOperationException("Unimplemented method 'getSpecificMetricsForApplication'");
     }
 }

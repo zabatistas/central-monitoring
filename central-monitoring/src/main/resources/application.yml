@@ -26,4 +26,4 @@ thanos:
 
 
 server:
-  port: 1111
+  port: 8081
