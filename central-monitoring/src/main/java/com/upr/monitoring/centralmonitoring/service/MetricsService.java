@@ -8,6 +8,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.upr.monitoring.centralmonitoring.client.ThanosClient;
 import com.upr.monitoring.centralmonitoring.model.MetricsResponseDto;
 
@@ -20,14 +22,18 @@ public class MetricsService {
 
     private KafkaTemplate<String, String> kafkaTemplate;
 
+    private ObjectMapper objectMapper;
+
     List<String> appIdList = new java.util.ArrayList<>();
 
     Map<String, List<String>> appMetricsMap = new java.util.HashMap<>();
 
-    public MetricsService(ThanosClient thanosClient, RabbitTemplate rabbitTemplate, KafkaTemplate<String, String> kafkaTemplate) {
+    public MetricsService(ThanosClient thanosClient, RabbitTemplate rabbitTemplate, 
+                         KafkaTemplate<String, String> kafkaTemplate, ObjectMapper objectMapper) {
         this.thanosClient = thanosClient;
         this.rabbitTemplate = rabbitTemplate;
         this.kafkaTemplate = kafkaTemplate;
+        this.objectMapper = objectMapper;
     }
 
     public MetricsResponseDto getMetricsForSpecificApplication(String appId) {
@@ -45,11 +51,20 @@ public class MetricsService {
                 .build();
         // TODO: Extract to a separate method -> sendMetrics
 
-        // Send to Kafka
-        kafkaTemplate.send("metrics-topic", dto.toString());
+        try {
+            String jsonMessage = objectMapper.writeValueAsString(dto);
+            
+            // Send to Kafka
+            kafkaTemplate.send("metrics-topic", jsonMessage);
 
-        // Send to RabbitMQ 
-        rabbitTemplate.convertAndSend("metrics.exchange", "metrics." + appId, dto.toString());
+            // Send to RabbitMQ 
+            rabbitTemplate.convertAndSend("metrics.exchange", "metrics." + appId, jsonMessage);
+        } catch (JsonProcessingException e) {
+            // Log error and handle gracefully
+            System.err.println("Error serializing metrics to JSON: " + e.getMessage());
+            // Optionally, you could send a simplified error message or rethrow as RuntimeException
+            throw new RuntimeException("Failed to serialize metrics data", e);
+        }
 
         return dto;
     }
