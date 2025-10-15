@@ -1,22 +1,23 @@
 # Build stage
 FROM eclipse-temurin:24-jdk AS builder
 WORKDIR /app
-# Copy Maven wrapper first and make it executable
-COPY mvnw .
-RUN chmod +x mvnw
-COPY .mvn/ .mvn
 
-# Copy the rest of the files
+# Copy Maven wrapper files first and make it executable
+COPY mvnw .
+COPY .mvn/ .mvn/
+RUN chmod +x mvnw
+
+# Copy only pom.xml first to leverage Docker layer caching for dependencies
 COPY pom.xml .
+
+# Download dependencies offline (this layer will be cached if pom.xml doesn't change)
+RUN ./mvnw dependency:go-offline -B
+
+# Copy source code
 COPY src/ src/
 
-# Add a cache for .m2 directory
-# Download dependencies only
-RUN ./mvnw dependency:go-offline
-
-
 # Build the application
-RUN ./mvnw clean package -Dmaven.test.skip=true
+RUN ./mvnw clean package -DskipTests -B
 
 # Runtime stage
 FROM eclipse-temurin:24-jre
