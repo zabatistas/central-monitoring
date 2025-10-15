@@ -9,7 +9,7 @@ spring:
     password: guest
 
   kafka:
-    bootstrap-servers: localhost:9092
+    bootstrap-servers: kafka:9092
     consumer:
       group-id: metrics-group
       auto-offset-reset: earliest

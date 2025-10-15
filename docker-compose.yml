@@ -26,37 +26,34 @@ services:
             --db-username=keycloak
             --db-password=keycloak
     ports:
-      - "8080:8080"        # Keycloak UI
+      - "8080:8080"
     depends_on:
       - postgres
     networks:
       - keycloak-net
 
   metrics-app:
-    image: metrics-app:latest   # built from your Dockerfile
+    image: metrics-app:latest
     container_name: metrics-app
     ports:
-      - "8081:8081"        # App exposed at localhost:8081
+      - "8081:8081"
     environment:
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: http://keycloak:8080/realms/myrealm
-      # RabbitMQ connection
       SPRING_RABBITMQ_HOST: rabbitmq
-      # Kafka connection (example)
-      # SPRING_KAFKA_BOOTSTRAP_SERVERS: localhost:9092
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092   # ✅ Fixed: connect by service name
     depends_on:
       - keycloak
       - rabbitmq
-      - kafka-init  # Wait for topics to be created
+      - kafka-init
     networks:
       - keycloak-net
 
-# ---------- New Services ----------
   rabbitmq:
     image: rabbitmq:3-management
     container_name: rabbitmq
     ports:
-      - "5672:5672"    # AMQP protocol
-      - "15672:15672"  # Management UI http://localhost:15672
+      - "5672:5672"
+      - "15672:15672"
     networks:
       - keycloak-net
 
@@ -76,24 +73,23 @@ services:
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      # Fixed networking configuration
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,PLAINTEXT_HOST://localhost:9092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-      KAFKA_LISTENERS: PLAINTEXT://localhost:29092,PLAINTEXT_HOST://localhost:9092
+      # ✅ Simplified and corrected listener setup
+      KAFKA_LISTENERS: PLAINTEXT://:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      # Auto-create topics
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
       KAFKA_DEFAULT_REPLICATION_FACTOR: 1
       KAFKA_NUM_PARTITIONS: 1
     ports:
-      - "9092:9092"
+      - "9092:9092"   # ✅ Still allows host access
     depends_on:
       - zookeeper
     networks:
       - keycloak-net
     healthcheck:
-      test: kafka-topics --bootstrap-server localhost:9092 --list
+      test: ["CMD-SHELL", "kafka-topics --bootstrap-server kafka:9092 --list"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -103,17 +99,16 @@ services:
     container_name: kafka-ui
     environment:
       KAFKA_CLUSTERS_0_NAME: local
-      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: localhost:9092
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092   # ✅ Fixed
       KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
     ports:
-      - "8082:8080"  # Kafka UI accessible at http://localhost:8082
+      - "8082:8080"
     depends_on:
       kafka:
         condition: service_healthy
     networks:
       - keycloak-net
 
-  # Service to create Kafka topics
   kafka-init:
     image: confluentinc/cp-kafka:7.6.1
     container_name: kafka-init
@@ -125,15 +120,10 @@ services:
     entrypoint: ['/bin/sh', '-c']
     command: |
       "
-      # Wait a bit more for Kafka to be fully ready
       sleep 10
-      
-      # Create the metrics-topic
-      kafka-topics --bootstrap-server localhost:9092 --create --if-not-exists --topic metrics-topic --replication-factor 1 --partitions 3
-      
+      kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists --topic metrics-topic --replication-factor 1 --partitions 3
       echo 'Topics created successfully!'
       "
-
 
 volumes:
   keycloak-data:
