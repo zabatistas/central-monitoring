@@ -1,5 +1,7 @@
 package com.upr.monitoring.centralmonitoring.service;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -36,13 +38,77 @@ public class MetricsService {
         this.objectMapper = objectMapper;
     }
 
+    /**
+     * Parses the metrics from Thanos response and extracts only the metrics data
+     * @param thanosResponse The complete response from Thanos API
+     * @return List of parsed metric objects containing metric metadata and values
+     */
+    @SuppressWarnings("unchecked")
+    public List<Map<String, Object>> parseMetricsFromThanosResponse(Map<String, Object> thanosResponse) {
+        List<Map<String, Object>> parsedMetrics = new ArrayList<>();
+        
+        if (thanosResponse == null || !thanosResponse.containsKey("data")) {
+            return parsedMetrics;
+        }
+        
+        Map<String, Object> data = (Map<String, Object>) thanosResponse.get("data");
+        if (data == null || !data.containsKey("result")) {
+            return parsedMetrics;
+        }
+        
+        List<Map<String, Object>> results = (List<Map<String, Object>>) data.get("result");
+        if (results == null) {
+            return parsedMetrics;
+        }
+        
+        for (Map<String, Object> result : results) {
+            Map<String, Object> parsedMetric = new HashMap<>();
+            
+            // Extract metric metadata
+            if (result.containsKey("metric")) {
+                Map<String, Object> metricInfo = (Map<String, Object>) result.get("metric");
+                parsedMetric.put("metric", metricInfo);
+            }
+            
+            // Extract metric value and timestamp
+            if (result.containsKey("value")) {
+                List<Object> value = (List<Object>) result.get("value");
+                if (value != null && value.size() >= 2) {
+                    parsedMetric.put("timestamp", value.get(0));
+                    parsedMetric.put("value", value.get(1));
+                }
+            }
+            
+            parsedMetrics.add(parsedMetric);
+        }
+        
+        return parsedMetrics;
+    }
+
     public MetricsResponseDto getMetricsForSpecificApplication(String appId) {
 
-        Map<String, Object> metrics = thanosClient.fetchMetrics(appId);
+        Map<String, Object> thanosResponse = thanosClient.fetchMetrics(appId);
         // Validate
-        if (metrics == null || metrics.isEmpty()) {
+        if (thanosResponse == null || thanosResponse.isEmpty()) {
             throw new RuntimeException("No metrics found for application ID: " + appId);
         }
+
+        // Parse the metrics from Thanos response
+        List<Map<String, Object>> parsedMetrics = parseMetricsFromThanosResponse(thanosResponse);
+        
+        // Limit to the first 10 entries if needed
+        List<Map<String, Object>> limitedMetrics = parsedMetrics.stream()
+                .limit(10)
+                .collect(java.util.stream.Collectors.toList());
+        
+        // Create a map to store the parsed metrics
+        Map<String, Object> metrics = new HashMap<>();
+        metrics.put("metrics", limitedMetrics);
+        metrics.put("total_count", parsedMetrics.size());
+        metrics.put("returned_count", limitedMetrics.size());
+        
+
+
         // TODO: Refactor Dto
         MetricsResponseDto dto = MetricsResponseDto.builder()
                 .applicationId(appId)

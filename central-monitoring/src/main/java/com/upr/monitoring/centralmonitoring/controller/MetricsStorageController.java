@@ -1,5 +1,6 @@
 package com.upr.monitoring.centralmonitoring.controller;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -25,7 +26,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping("/metrics-storage")
-@Tag(name = "Metrics Storage", description = "Operations for storing and retrieving metrics in memory")
+@Tag(name = "Metrics Storage", description = "Operations for storing and retrieving metrics by application ID")
 public class MetricsStorageController {
 
     private final MetricsStorageService metricsStorageService;
@@ -35,8 +36,8 @@ public class MetricsStorageController {
     }
 
     @Operation(
-        summary = "Store metric data",
-        description = "Adds a new metric with its associated data to the storage map"
+        summary = "Store metric for application",
+        description = "Adds a new metric to the list of metrics for a specific application"
     )
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Metric successfully stored",
@@ -52,8 +53,8 @@ public class MetricsStorageController {
             @RequestBody MetricStorageRequest request) {
         
         try {
-            metricsStorageService.storeMetric(request.getMetricKey(), request.getMetricData());
-            return ResponseEntity.ok("Metric '" + request.getMetricKey() + "' successfully stored");
+            metricsStorageService.storeMetric(request.getApplicationId(), request.getMetric());
+            return ResponseEntity.ok("Metric '" + request.getMetric() + "' successfully stored for application '" + request.getApplicationId() + "'");
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Error storing metric: " + e.getMessage());
         }
@@ -61,7 +62,7 @@ public class MetricsStorageController {
 
     @Operation(
         summary = "Get all stored metrics",
-        description = "Retrieves all metrics currently stored in the map"
+        description = "Retrieves all applications and their associated metrics"
     )
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "All metrics retrieved successfully",
@@ -70,91 +71,118 @@ public class MetricsStorageController {
                     content = @Content(mediaType = "application/json"))
     })
     @GetMapping("/all")
-    public ResponseEntity<Map<String, Object>> getAllMetrics() {
-        Map<String, Object> allMetrics = metricsStorageService.getAllMetrics();
+    public ResponseEntity<Map<String, List<String>>> getAllMetrics() {
+        Map<String, List<String>> allMetrics = metricsStorageService.getAllMetrics();
         return ResponseEntity.ok(allMetrics);
     }
 
     @Operation(
-        summary = "Check if metric exists",
-        description = "Verifies whether a specific metric key exists in the storage"
+        summary = "Check if application exists",
+        description = "Verifies whether a specific application has metrics stored"
     )
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Metric existence check completed",
+        @ApiResponse(responseCode = "200", description = "Application existence check completed",
                     content = @Content(mediaType = "application/json", schema = @Schema(type = "boolean"))),
         @ApiResponse(responseCode = "500", description = "Internal server error",
                     content = @Content(mediaType = "application/json"))
     })
-    @GetMapping("/exists/{metricKey}")
-    public ResponseEntity<Boolean> checkMetricExists(
-            @Parameter(description = "Key of the metric to check", required = true)
-            @PathVariable String metricKey) {
+    @GetMapping("/exists/{applicationId}")
+    public ResponseEntity<Boolean> checkApplicationExists(
+            @Parameter(description = "ID of the application to check", required = true)
+            @PathVariable String applicationId) {
         
-        boolean exists = metricsStorageService.metricExists(metricKey);
+        boolean exists = metricsStorageService.applicationExists(applicationId);
         return ResponseEntity.ok(exists);
     }
 
     @Operation(
-        summary = "Get specific metric",
-        description = "Retrieves the data for a specific metric by its key"
+        summary = "Get metrics for application",
+        description = "Retrieves all metrics for a specific application by its ID"
     )
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Metric found and retrieved",
+        @ApiResponse(responseCode = "200", description = "Metrics found and retrieved",
                     content = @Content(mediaType = "application/json")),
-        @ApiResponse(responseCode = "404", description = "Metric not found",
+        @ApiResponse(responseCode = "404", description = "Application not found",
                     content = @Content(mediaType = "text/plain", schema = @Schema(type = "string"))),
         @ApiResponse(responseCode = "500", description = "Internal server error",
                     content = @Content(mediaType = "text/plain", schema = @Schema(type = "string")))
     })
-    @GetMapping("/{metricKey}")
-    public ResponseEntity<Object> getMetric(
-            @Parameter(description = "Key of the metric to retrieve", required = true)
-            @PathVariable String metricKey) {
+    @GetMapping("/{applicationId}")
+    public ResponseEntity<List<String>> getMetrics(
+            @Parameter(description = "ID of the application to retrieve metrics for", required = true)
+            @PathVariable String applicationId) {
         
-        Object metricData = metricsStorageService.getMetric(metricKey);
-        if (metricData != null) {
-            return ResponseEntity.ok(metricData);
+        List<String> metrics = metricsStorageService.getMetrics(applicationId);
+        if (metrics != null) {
+            return ResponseEntity.ok(metrics);
         } else {
             return ResponseEntity.notFound().build();
         }
     }
 
     @Operation(
-        summary = "Get all metric keys",
-        description = "Retrieves all metric keys currently stored in the map"
+        summary = "Get all application IDs",
+        description = "Retrieves all application IDs that have metrics stored"
     )
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "All metric keys retrieved successfully",
+        @ApiResponse(responseCode = "200", description = "All application IDs retrieved successfully",
                     content = @Content(mediaType = "application/json")),
         @ApiResponse(responseCode = "500", description = "Internal server error",
                     content = @Content(mediaType = "application/json"))
     })
-    @GetMapping("/keys")
-    public ResponseEntity<Set<String>> getAllMetricKeys() {
-        Set<String> keys = metricsStorageService.getAllMetricKeys();
-        return ResponseEntity.ok(keys);
+    @GetMapping("/applications")
+    public ResponseEntity<Set<String>> getAllApplicationIds() {
+        Set<String> applicationIds = metricsStorageService.getAllApplicationIds();
+        return ResponseEntity.ok(applicationIds);
     }
 
     @Operation(
-        summary = "Delete specific metric",
-        description = "Removes a specific metric from the storage by its key"
+        summary = "Delete application and all its metrics",
+        description = "Removes an application and all its associated metrics from storage"
     )
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Metric successfully deleted",
+        @ApiResponse(responseCode = "200", description = "Application successfully deleted",
                     content = @Content(mediaType = "text/plain", schema = @Schema(type = "string"))),
-        @ApiResponse(responseCode = "404", description = "Metric not found",
+        @ApiResponse(responseCode = "404", description = "Application not found",
                     content = @Content(mediaType = "text/plain", schema = @Schema(type = "string"))),
         @ApiResponse(responseCode = "500", description = "Internal server error",
                     content = @Content(mediaType = "text/plain", schema = @Schema(type = "string")))
     })
-    @DeleteMapping("/{metricKey}")
-    public ResponseEntity<String> deleteMetric(
-            @Parameter(description = "Key of the metric to delete", required = true)
-            @PathVariable String metricKey) {
+    @DeleteMapping("/{applicationId}")
+    public ResponseEntity<String> deleteApplication(
+            @Parameter(description = "ID of the application to delete", required = true)
+            @PathVariable String applicationId) {
         
-        Object removedMetric = metricsStorageService.removeMetric(metricKey);
-        if (removedMetric != null) {
-            return ResponseEntity.ok("Metric '" + metricKey + "' successfully deleted");
+        List<String> removedMetrics = metricsStorageService.removeApplication(applicationId);
+        if (removedMetrics != null) {
+            return ResponseEntity.ok("Application '" + applicationId + "' and its " + removedMetrics.size() + " metrics successfully deleted");
+        } else {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @Operation(
+        summary = "Delete specific metric from application",
+        description = "Removes a specific metric from an application"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Metric successfully deleted",
+                    content = @Content(mediaType = "text/plain", schema = @Schema(type = "string"))),
+        @ApiResponse(responseCode = "404", description = "Metric or application not found",
+                    content = @Content(mediaType = "text/plain", schema = @Schema(type = "string"))),
+        @ApiResponse(responseCode = "500", description = "Internal server error",
+                    content = @Content(mediaType = "text/plain", schema = @Schema(type = "string")))
+    })
+    @DeleteMapping("/{applicationId}/metrics/{metric}")
+    public ResponseEntity<String> deleteMetric(
+            @Parameter(description = "ID of the application", required = true)
+            @PathVariable String applicationId,
+            @Parameter(description = "Metric to delete", required = true)
+            @PathVariable String metric) {
+        
+        boolean removed = metricsStorageService.removeMetric(applicationId, metric);
+        if (removed) {
+            return ResponseEntity.ok("Metric '" + metric + "' successfully deleted from application '" + applicationId + "'");
         } else {
             return ResponseEntity.notFound().build();
         }
@@ -177,18 +205,34 @@ public class MetricsStorageController {
     }
 
     @Operation(
-        summary = "Get metrics count",
-        description = "Returns the total number of metrics currently stored"
+        summary = "Get application count",
+        description = "Returns the total number of applications with stored metrics"
     )
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Metrics count retrieved successfully",
+        @ApiResponse(responseCode = "200", description = "Application count retrieved successfully",
                     content = @Content(mediaType = "application/json", schema = @Schema(type = "integer"))),
         @ApiResponse(responseCode = "500", description = "Internal server error",
                     content = @Content(mediaType = "application/json"))
     })
-    @GetMapping("/count")
-    public ResponseEntity<Integer> getMetricsCount() {
-        int count = metricsStorageService.getMetricsCount();
+    @GetMapping("/count/applications")
+    public ResponseEntity<Integer> getApplicationCount() {
+        int count = metricsStorageService.getApplicationCount();
+        return ResponseEntity.ok(count);
+    }
+
+    @Operation(
+        summary = "Get total metrics count",
+        description = "Returns the total number of metrics across all applications"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Total metrics count retrieved successfully",
+                    content = @Content(mediaType = "application/json", schema = @Schema(type = "integer"))),
+        @ApiResponse(responseCode = "500", description = "Internal server error",
+                    content = @Content(mediaType = "application/json"))
+    })
+    @GetMapping("/count/metrics")
+    public ResponseEntity<Integer> getTotalMetricsCount() {
+        int count = metricsStorageService.getTotalMetricsCount();
         return ResponseEntity.ok(count);
     }
 }

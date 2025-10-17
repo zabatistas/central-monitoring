@@ -10,31 +10,31 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Schema(description = "Request object for storing metric data")
+@Schema(description = "Request object for storing metric data for an application")
 public class MetricStorageRequest {
 
-    @Schema(description = "Unique key identifier for the metric", 
-            example = "cpu_usage_app1", 
+    @Schema(description = "Unique identifier for the application", 
+            example = "app1", 
             required = true)
-    private String metricKey;
+    private String applicationId;
     
-    @Schema(description = "The metric data to be stored (can be any type of object)", 
-            example = "{\"value\": 75.5, \"unit\": \"percentage\", \"timestamp\": \"2023-10-03T14:30:00\"}")
-    private Object metricData;
+    @Schema(description = "The metric to be stored for the application", 
+            example = "cpu_usage_75.5_percent")
+    private String metric;
 
-    public String getMetricKey() {
-        return metricKey;
+    public String getApplicationId() {
+        return applicationId;
     }
 
-    public void setMetricKey(String metricKey) {
-        this.metricKey = metricKey;
+    public void setApplicationId(String applicationId) {
+        this.applicationId = applicationId;
     }
 
-    public Object getMetricData() {
-        return metricData;
+    public String getMetric() {
+        return metric;
     }
 
-    public void setMetricData(Object metricData) {
-        this.metricData = metricData;
+    public void setMetric(String metric) {
+        this.metric = metric;
     }
 }
