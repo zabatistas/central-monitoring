@@ -76,10 +76,28 @@ public class MetricsController {
 
     //TODO:  We want an API that will monitor specific application metrics
 
+    @Operation(
+        summary = "Fetch specific metrics for application",
+        description = "Retrieves specific metrics data for a given application by its ID"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Specific metrics successfully retrieved",
+                    content = @Content(mediaType = "application/json", 
+                                     schema = @Schema(implementation = MetricsResponseDto.class))),
+        @ApiResponse(responseCode = "404", description = "Application not found",
+                    content = @Content(mediaType = "application/json")),
+        @ApiResponse(responseCode = "500", description = "Internal server error",
+                    content = @Content(mediaType = "application/json"))
+    })
     @GetMapping("metrics/fetchSpecific/{applicationId}")
-    public MetricsResponseDto fetchSpecificMetrics(@PathVariable String applicationId) {
+    public MetricsResponseDto fetchSpecificMetrics(
+            @Parameter(description = "ID of the application to fetch specific metrics for", required = true)
+            @PathVariable String applicationId) {
         return metricsService.getSpecificMetricsForApplication(applicationId);
     }
+
+
+    
     
 
 
