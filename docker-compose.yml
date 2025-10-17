@@ -1,4 +1,4 @@
-version: '3.9'
+version: '3.7'
 
 services:
   postgres:
@@ -33,7 +33,9 @@ services:
       - keycloak-net
 
   metrics-app:
-    image: metrics-app:latest
+    build:
+      context: ./central-monitoring
+      dockerfile: Dockerfile
     container_name: metrics-app
     ports:
       - "8081:8081"
@@ -104,8 +106,7 @@ services:
     ports:
       - "8082:8080"
     depends_on:
-      kafka:
-        condition: service_healthy
+      - kafka
     networks:
       - keycloak-net
 
@@ -113,8 +114,7 @@ services:
     image: confluentinc/cp-kafka:7.6.1
     container_name: kafka-init
     depends_on:
-      kafka:
-        condition: service_healthy
+      - kafka
     networks:
       - keycloak-net
     entrypoint: ['/bin/sh', '-c']
