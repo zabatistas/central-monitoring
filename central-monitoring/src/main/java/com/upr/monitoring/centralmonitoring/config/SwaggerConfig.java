@@ -22,7 +22,7 @@ public class SwaggerConfig {
         return new OpenAPI()
                 .servers(List.of(
                         new Server().url("http://localhost:" + serverPort).description("Development Server"),
-                        new Server().url("https://your-production-domain.com").description("Production Server")
+                        new Server().url("https://82.223.13.241").description("Production Server")
                 ))
                 .info(new Info()
                         .title("Central Monitoring API")
@@ -30,7 +30,6 @@ public class SwaggerConfig {
                         .version("1.0.0")
                         .contact(new Contact()
                                 .name("UPR Monitoring Team")
-                                .email("monitoring@upr.edu")
                                 .url("https://github.com/zabatistas/central-monitoring"))
                         .license(new License()
                                 .name("MIT License")

@@ -36,11 +36,11 @@ public class MetricsStorageController {
     }
 
     @Operation(
-        summary = "Store metric for application",
-        description = "Adds a new metric to the list of metrics for a specific application"
+        summary = "Store metric name for application",
+        description = "Stores a metric name for a specific application to enable later retrieval from Thanos monitoring system"
     )
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Metric successfully stored",
+        @ApiResponse(responseCode = "200", description = "Metric name successfully stored",
                     content = @Content(mediaType = "text/plain", schema = @Schema(type = "string"))),
         @ApiResponse(responseCode = "400", description = "Invalid metric data",
                     content = @Content(mediaType = "text/plain", schema = @Schema(type = "string"))),

@@ -53,11 +53,11 @@ public class ThanosClient {
         return restTemplate.getForObject(url, Map.class);
     }
 
-    public Map<String, String> fetchSpecificMetrics(String appId, List<String> metricNames) {
+    public Map<String, Object> fetchSpecificMetrics(String appId, List<String> metricNames) {
         // Prometheus/Thanos query API endpoint
         log.info("Fetching specific metrics '{}' for appId: {}", metricNames, appId);
 
-        Map<String, String> results = new HashMap<>();
+        Map<String, Object> results = new HashMap<>();
         String metrics = String.join("|", metricNames);
         // Build the PromQL query
         String promql = "{__name__=~\"" + metrics + "\"," + "application_id=\"" + appId + "\"}";
@@ -71,9 +71,10 @@ public class ThanosClient {
                 .toUri();
         log.info("Thanos query URI: {}", uri.toString());
         Map<String, Object> response = restTemplate.getForObject(uri, Map.class);
+        return response;
         // Parse the response to extract metric values
-        Map<String, String> extractedValues = extractMetricValues(response);
-        return extractedValues;
+        // Map<String, String> extractedValues = extractMetricValues(response);
+        // return extractedValues;
     }
 
     private Map<String, String> extractMetricValues(Map<String, Object> response) {

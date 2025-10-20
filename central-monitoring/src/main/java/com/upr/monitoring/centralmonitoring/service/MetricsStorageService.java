@@ -31,6 +31,28 @@ public class MetricsStorageService {
     }
 
     /**
+     * Stores multiple metrics for the given application ID
+     * @param applicationId The unique identifier for the application
+     * @param metrics The list of metrics to be associated with the application
+     */
+    public void storeMetrics(String applicationId, List<String> metrics) {
+        if (applicationId == null || applicationId.trim().isEmpty()) {
+            throw new IllegalArgumentException("Application ID cannot be null or empty");
+        }
+        if (metrics == null) {
+            throw new IllegalArgumentException("Metrics list cannot be null");
+        }
+        
+        List<String> existingMetrics = metricsStorage.computeIfAbsent(applicationId, k -> new ArrayList<>());
+        // Only add metrics that don't already exist
+        for (String metric : metrics) {
+            if (metric != null && !existingMetrics.contains(metric)) {
+                existingMetrics.add(metric);
+            }
+        }
+    }
+
+    /**
      * Retrieves metrics for a specific application ID
      * @param applicationId The application ID to retrieve metrics for
      * @return The list of metrics for the application, or null if not found
