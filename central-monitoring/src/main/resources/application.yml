@@ -19,6 +19,16 @@ spring:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
 
+  # AI Provider Configuration
+  ai:
+    anthropic:
+      api-key: ${ANTHROPIC_API_KEY}
+
+# MCP server configuration - will be configured programmatically
+mcp:
+  server:
+    url: http://82.223.13.241:8000
+    enabled: true
 
 thanos:
   base-url: http://82.223.13.241:10904
